@@ -66,7 +66,6 @@ func generateToken(user User) (string, error) {
 func (s server) SignUp(ctx context.Context, user *pointSystemPb.SignUpRequest) (*pointSystemPb.SignUpResponse, error) {
 	var newUser User
 
-	fmt.Println("got here")
 	if err := s.db.Where(&User{Email: user.Email}).First(&newUser).Error; err != nil {
 		if err != gorm.ErrRecordNotFound {
 			return &pointSystemPb.SignUpResponse{
