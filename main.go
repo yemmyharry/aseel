@@ -3,6 +3,7 @@ package main
 import (
 	"aseel/pointSystem/pointSystemPb"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt"
 	"github.com/joho/godotenv"
@@ -17,8 +18,6 @@ import (
 	"os"
 	"time"
 )
-
-type ActivityType int
 
 type server struct {
 	db *gorm.DB
@@ -36,11 +35,10 @@ type User struct {
 }
 
 type ActivityHistory struct {
-	Id        int          `gorm:"primaryKey" json:"id"`
-	UserId    int          `gorm:"user_id, foreignKey:Users " json:"user_id"`
-	Activity  ActivityType `gorm:"activity_type" json:"activity_type"`
-	Points    float64      `gorm:"points" json:"points"`
-	CreatedAt time.Time    `gorm:"created_at" json:"created_at"`
+	Id           int       `gorm:"primaryKey" json:"id"`
+	ActivityType string    `gorm:"activity_type" json:"activity_type"`
+	Points       float64   `gorm:"points" json:"points"`
+	CreatedAt    time.Time `gorm:"created_at" json:"created_at"`
 }
 
 func hashPassword(password string) string {
@@ -65,14 +63,17 @@ func generateToken(user User) (string, error) {
 	return tokenString, nil
 }
 
-func (s server) SignUp(ctx context.Context, user *pointSystemPb.User) (*pointSystemPb.UserResponse, error) {
+func (s server) SignUp(ctx context.Context, user *pointSystemPb.SignUpRequest) (*pointSystemPb.SignUpResponse, error) {
 	var newUser User
 
+	fmt.Println("got here")
 	if err := s.db.Where(&User{Email: user.Email}).First(&newUser).Error; err != nil {
-		return &pointSystemPb.UserResponse{
-			Status: http.StatusConflict,
-			Error:  "user already exists",
-		}, err
+		if err != gorm.ErrRecordNotFound {
+			return &pointSystemPb.SignUpResponse{
+				Status: http.StatusNotFound,
+				Error:  "user not found",
+			}, err
+		}
 	}
 	newUser.Email = user.Email
 	newUser.Name = user.Name
@@ -81,7 +82,7 @@ func (s server) SignUp(ctx context.Context, user *pointSystemPb.User) (*pointSys
 
 	s.db.Create(&newUser)
 
-	return &pointSystemPb.UserResponse{
+	return &pointSystemPb.SignUpResponse{
 		Status: http.StatusCreated,
 		Error:  "",
 	}, nil
@@ -90,10 +91,14 @@ func (s server) SignUp(ctx context.Context, user *pointSystemPb.User) (*pointSys
 func (s server) SignIn(ctx context.Context, request *pointSystemPb.SignInRequest) (*pointSystemPb.SignInResponse, error) {
 	var user User
 	if err := s.db.Where(&User{Email: request.Email}).First(&user).Error; err != nil {
-		return &pointSystemPb.SignInResponse{
-			Status: http.StatusNotFound,
-			Error:  "user not found",
-		}, err
+
+		if err != gorm.ErrRecordNotFound {
+			return &pointSystemPb.SignInResponse{
+				Status: http.StatusNotFound,
+				Error:  "user not found",
+			}, err
+		}
+
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)); err != nil {
@@ -140,21 +145,26 @@ func (s server) AddActivity(ctx context.Context, request *pointSystemPb.AddActiv
 
 	var user User
 	if err := s.db.Where(&User{Email: request.Email}).First(&user).Error; err != nil {
-		return &pointSystemPb.AddActivityResponse{
-			Message: "user not found",
-		}, err
+		if err == gorm.ErrRecordNotFound {
+			return &pointSystemPb.AddActivityResponse{
+				Message: "user not found",
+			}, err
+		} else {
+			return &pointSystemPb.AddActivityResponse{
+				Message: "internal server error",
+			}, err
+		}
 	}
 
 	if user.Role != "admin" {
 		return &pointSystemPb.AddActivityResponse{
-			Message: "user is not admin",
+			Message: "you are not allowed to add activities",
 		}, nil
 	}
 
 	var activity ActivityHistory
 
-	activity.UserId = int(request.UserId)
-	activity.Activity = ActivityType(request.ActivityType)
+	activity.ActivityType = request.ActivityType
 	activity.Points = float64(request.Points)
 	activity.CreatedAt = time.Now()
 
@@ -168,17 +178,32 @@ func (s server) SendPoints(ctx context.Context, request *pointSystemPb.SendPoint
 	var receiver User
 
 	if err := s.db.Where(&User{Email: request.SenderEmail}).First(&sender).Error; err != nil {
-		return &pointSystemPb.SendPointsResponse{
-			Status: http.StatusNotFound,
-			Error:  "sender not found",
-		}, err
+		if err == gorm.ErrRecordNotFound {
+			return &pointSystemPb.SendPointsResponse{
+				Status: http.StatusNotFound,
+				Error:  "sender not found",
+			}, err
+		} else {
+			return &pointSystemPb.SendPointsResponse{
+				Status: http.StatusInternalServerError,
+				Error:  "internal server error",
+			}, err
+		}
 	}
 
 	if err := s.db.Where(&User{Email: request.ReceiverEmail}).First(&receiver).Error; err != nil {
-		return &pointSystemPb.SendPointsResponse{
-			Status: http.StatusNotFound,
-			Error:  "receiver not found",
-		}, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &pointSystemPb.SendPointsResponse{
+				Status: http.StatusNotFound,
+				Error:  "receiver not found",
+			}, err
+		} else {
+			return &pointSystemPb.SendPointsResponse{
+				Status: http.StatusInternalServerError,
+				Error:  "internal server error",
+			}, err
+		}
+
 	}
 
 	if request.SenderEmail == request.ReceiverEmail {
@@ -258,7 +283,7 @@ func connectToDB(db *gorm.DB) (*gorm.DB, error) {
 
 func main() {
 	s := server{}
-	_, err := connectToDB(s.db)
+	DB, err := connectToDB(s.db)
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 		return
@@ -270,7 +295,9 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	srv := grpc.NewServer()
-	pointSystemPb.RegisterPointSystemServer(srv, &server{})
+	pointSystemPb.RegisterPointSystemServer(srv, &server{
+		db: DB,
+	})
 	reflection.Register(srv)
 	if err = srv.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
