@@ -16,7 +16,14 @@ message User {
   google.protobuf.Timestamp updated_at = 8;
 }
 
-message UserResponse {
+message SignUpRequest {
+  string name = 1;
+  string email = 2;
+  string password = 3;
+  string role = 4;
+}
+
+message SignUpResponse {
   int64 status = 1;
   string error = 2;
 }
@@ -36,11 +43,7 @@ message SignInResponse {
 message ActivityHistory{
   int64 id = 1;
   int64 user_id = 2;
-  enum ActivityType{
-    Invite_Friends = 0;
-    Add_Review = 1;
-  }
-  ActivityHistory.ActivityType activity_type = 3;
+  string ActivityType = 3;
   float points = 4;
   google.protobuf.Timestamp created_at = 5;
 }
@@ -58,10 +61,8 @@ message GetPointsResponse{
 
 message AddActivityRequest{
   string email = 1;
-  ActivityHistory.ActivityType activity_type = 2;
-  string role = 3;
-  float points = 4;
-  int64 user_id = 5;
+  string ActivityType = 2;
+  float points = 3;
 }
 
 message AddActivityResponse{
@@ -93,7 +94,7 @@ message SpendPointsResponse{
 
 
 service PointSystem{
-  rpc SignUp(User) returns (UserResponse);
+  rpc SignUp(SignUpRequest) returns (SignUpResponse);
   rpc SignIn(SignInRequest) returns (SignInResponse);
   rpc GetPoints(GetPointsRequest) returns (GetPointsResponse);
   rpc AddActivity(AddActivityRequest) returns (AddActivityResponse);
