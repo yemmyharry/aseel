@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PointSystemClient interface {
-	SignUp(ctx context.Context, in *User, opts ...grpc.CallOption) (*UserResponse, error)
+	SignUp(ctx context.Context, in *SignUpRequest, opts ...grpc.CallOption) (*SignUpResponse, error)
 	SignIn(ctx context.Context, in *SignInRequest, opts ...grpc.CallOption) (*SignInResponse, error)
 	GetPoints(ctx context.Context, in *GetPointsRequest, opts ...grpc.CallOption) (*GetPointsResponse, error)
 	AddActivity(ctx context.Context, in *AddActivityRequest, opts ...grpc.CallOption) (*AddActivityResponse, error)
@@ -34,8 +34,8 @@ func NewPointSystemClient(cc grpc.ClientConnInterface) PointSystemClient {
 	return &pointSystemClient{cc}
 }
 
-func (c *pointSystemClient) SignUp(ctx context.Context, in *User, opts ...grpc.CallOption) (*UserResponse, error) {
-	out := new(UserResponse)
+func (c *pointSystemClient) SignUp(ctx context.Context, in *SignUpRequest, opts ...grpc.CallOption) (*SignUpResponse, error) {
+	out := new(SignUpResponse)
 	err := c.cc.Invoke(ctx, "/aseel.PointSystem/SignUp", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (c *pointSystemClient) SpendPoints(ctx context.Context, in *SpendPointsRequ
 // All implementations should embed UnimplementedPointSystemServer
 // for forward compatibility
 type PointSystemServer interface {
-	SignUp(context.Context, *User) (*UserResponse, error)
+	SignUp(context.Context, *SignUpRequest) (*SignUpResponse, error)
 	SignIn(context.Context, *SignInRequest) (*SignInResponse, error)
 	GetPoints(context.Context, *GetPointsRequest) (*GetPointsResponse, error)
 	AddActivity(context.Context, *AddActivityRequest) (*AddActivityResponse, error)
@@ -104,7 +104,7 @@ type PointSystemServer interface {
 type UnimplementedPointSystemServer struct {
 }
 
-func (UnimplementedPointSystemServer) SignUp(context.Context, *User) (*UserResponse, error) {
+func (UnimplementedPointSystemServer) SignUp(context.Context, *SignUpRequest) (*SignUpResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SignUp not implemented")
 }
 func (UnimplementedPointSystemServer) SignIn(context.Context, *SignInRequest) (*SignInResponse, error) {
@@ -135,7 +135,7 @@ func RegisterPointSystemServer(s grpc.ServiceRegistrar, srv PointSystemServer) {
 }
 
 func _PointSystem_SignUp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(User)
+	in := new(SignUpRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func _PointSystem_SignUp_Handler(srv interface{}, ctx context.Context, dec func(
 		FullMethod: "/aseel.PointSystem/SignUp",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PointSystemServer).SignUp(ctx, req.(*User))
+		return srv.(PointSystemServer).SignUp(ctx, req.(*SignUpRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
