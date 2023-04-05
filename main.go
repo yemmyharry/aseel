@@ -148,6 +148,10 @@ func (s server) AddActivity(ctx context.Context, request *pointSystemPb.AddActiv
 			return &pointSystemPb.AddActivityResponse{
 				Message: "user not found",
 			}, err
+		} else {
+			return &pointSystemPb.AddActivityResponse{
+				Message: "internal server error",
+			}, err
 		}
 	}
 
@@ -179,6 +183,12 @@ func (s server) SendPoints(ctx context.Context, request *pointSystemPb.SendPoint
 				Error:  "sender not found",
 			}, err
 		}
+
+		return &pointSystemPb.SendPointsResponse{
+			Status: http.StatusInternalServerError,
+			Error:  "internal server error",
+		}, err
+
 	}
 
 	if err := s.db.Where(&User{Email: request.ReceiverEmail}).First(&receiver).Error; err != nil {
@@ -187,12 +197,12 @@ func (s server) SendPoints(ctx context.Context, request *pointSystemPb.SendPoint
 				Status: http.StatusNotFound,
 				Error:  "receiver not found",
 			}, err
-		} else {
-			return &pointSystemPb.SendPointsResponse{
-				Status: http.StatusInternalServerError,
-				Error:  "internal server error",
-			}, err
 		}
+
+		return &pointSystemPb.SendPointsResponse{
+			Status: http.StatusInternalServerError,
+			Error:  "internal server error",
+		}, err
 
 	}
 
