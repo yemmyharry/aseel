@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package aseel;
+
+import "google/protobuf/timestamp.proto";
+option go_package = "./pointSystem/pointSystemPb";
+
+message User {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  string password = 4;
+  string role = 5;
+  float points = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message UserResponse {
+  int64 status = 1;
+  string error = 2;
+}
+
+message SignInRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message SignInResponse {
+  int64 status = 1;
+  string access_token = 2;
+  string error = 3;
+}
+
+
+message ActivityHistory{
+  int64 id = 1;
+  int64 user_id = 2;
+  enum ActivityType{
+    Invite_Friends = 0;
+    Add_Review = 1;
+  }
+  ActivityHistory.ActivityType activity_type = 3;
+  float points = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+
+message GetPointsRequest{
+  int64 user_id = 1;
+}
+
+message GetPointsResponse{
+  float points = 1;
+  string error = 2;
+}
+
+message AddActivityRequest{
+  string email = 1;
+  ActivityHistory.ActivityType activity_type = 2;
+  string role = 3;
+  float points = 4;
+}
+
+message AddActivityResponse{
+  string message = 1;
+}
+
+message SendPointsRequest{
+  int64 sender_id = 1;
+  int64 receiver_id = 2;
+  float points = 3;
+}
+
+message SendPointsResponse{
+  string error = 1;
+}
+
+message SpendPointsRequest{
+  int64 user_id = 1;
+  float points = 2;
+}
+
+message SpendPointsResponse{
+  string error = 1;
+}
+
+
+service PointSystem{
+  rpc SignUp(User) returns (UserResponse);
+  rpc SignIn(SignInRequest) returns (SignInResponse);
+  rpc GetPoints(GetPointsRequest) returns (GetPointsResponse);
+  rpc AddActivity(AddActivityRequest) returns (AddActivityResponse);
+  rpc SendPoints(SendPointsRequest) returns (SendPointsResponse);
+  rpc SpendPoints(SpendPointsRequest) returns (SpendPointsResponse);
+}
