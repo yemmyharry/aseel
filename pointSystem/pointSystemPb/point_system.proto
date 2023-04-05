@@ -47,12 +47,13 @@ message ActivityHistory{
 
 
 message GetPointsRequest{
-  int64 user_id = 1;
+  string email = 1;
 }
 
 message GetPointsResponse{
   float points = 1;
-  string error = 2;
+  int64 status = 2;
+  string error = 3;
 }
 
 message AddActivityRequest{
@@ -60,6 +61,7 @@ message AddActivityRequest{
   ActivityHistory.ActivityType activity_type = 2;
   string role = 3;
   float points = 4;
+  int64 user_id = 5;
 }
 
 message AddActivityResponse{
@@ -67,22 +69,26 @@ message AddActivityResponse{
 }
 
 message SendPointsRequest{
-  int64 sender_id = 1;
-  int64 receiver_id = 2;
+  string sender_email = 1;
+  string receiver_email = 2;
   float points = 3;
 }
 
 message SendPointsResponse{
-  string error = 1;
+  int64 status = 1;
+  string error = 2;
+  string message = 3;
 }
 
 message SpendPointsRequest{
-  int64 user_id = 1;
+  string email = 1;
   float points = 2;
 }
 
 message SpendPointsResponse{
-  string error = 1;
+  int64 status = 1;
+  string error = 2;
+  string message = 3;
 }
 
 
